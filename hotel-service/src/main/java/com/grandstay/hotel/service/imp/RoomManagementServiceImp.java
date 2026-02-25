@@ -12,7 +12,9 @@ import jakarta.persistence.PersistenceContext;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.function.Function;
+import java.util.ArrayList;
+import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.model.Reservation;
 
 @Service
 @Transactional
@@ -109,8 +111,27 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
         response.setPricePerNight(room.getPricePerNight());
         response.setStatus(room.getStatus());
         response.setHotelCity(room.getHotelCity());
-        response.setReservations(room.getReservations());
-        response.setHousekeepingTasks(room.getHousekeepingTasks());
+        if (room.getReservations() != null) {
+            List<reservationResponse> resList = new ArrayList<>();
+            for (Reservation r : room.getReservations()) {
+                reservationResponse rr = new reservationResponse();
+                rr.setReservationId(r.getReservationId());
+                if (r.getUser() != null) rr.setCustomer(r.getUser().getUserId());
+                rr.setRoomId(room.getRoomId());
+                rr.setRoomNumber(room.getRoomNumber());
+                rr.setCheckInDate(r.getCheckInDate());
+                rr.setCheckOutDate(r.getCheckOutDate());
+                rr.setStatus(r.getStatus());
+                if (r.getBilling() != null) rr.setBillingId(r.getBilling().getBillingId());
+                resList.add(rr);
+            }
+            response.setReservations(resList);
+        }
+        if (room.getHousekeepingTasks() != null) {
+            List<Long> hkIds = new ArrayList<>();
+            room.getHousekeepingTasks().forEach(h -> hkIds.add(h.getTaskId()));
+            response.setHousekeepingTasks(hkIds);
+        }
         response.setCreatedAt(room.getCreatedAt());
         response.setUpdatedAt(room.getUpdatedAt());
         return response;

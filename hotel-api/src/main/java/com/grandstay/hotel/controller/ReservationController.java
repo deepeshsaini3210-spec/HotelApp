@@ -17,20 +17,20 @@ public interface ReservationController {
     // GET    /reservations/customer/{customerId}
     // PUT    /reservations/{reservationId}/cancel
 
-    @PostMapping("/create/reservation")
+    @PostMapping("/create")
     public reservationResponse createCustomerAndUpdate(
         @RequestBody reservationRequest reservation
 
-        
+
     );
     
-    @GetMapping("/reservations/{reservationId}")
+    @GetMapping("/{reservationId}")
     public reservationResponse getReservationById(@PathVariable Long reservationId);
 
-    @GetMapping("/reservations/customer/{customerId}")
+    @GetMapping("/customer/{customerId}")
     public List<reservationResponse> getReservationByCustomerId(@PathVariable Long customerId);
 
-    @PutMapping("/reservations/{reservationId}/cancel")
+    @PutMapping("/{reservationId}/cancel")
     public Boolean reservationCancel(@PathVariable Long reservationId);
 
 }

@@ -42,15 +42,29 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
 
     @Override
     public reservationResponse createCustomerAndUpdate(reservationRequest request) {
-        User user = authService.findByIdOrThrow(request.getCustomer());
+        if (request == null) {
+            throw new IllegalArgumentException("reservationRequest cannot be null");
+        }
+        if (request.getCustomer() == null) {
+            throw new IllegalArgumentException("customer id is required");
+        }
+        if (request.getRoom() == null) {
+            throw new IllegalArgumentException("room id is required");
+        }
+        if (request.getCheckInDate() == null || request.getCheckOutDate() == null) {
+            throw new IllegalArgumentException("checkInDate and checkOutDate are required");
+        }
+        if (!request.getCheckOutDate().isAfter(request.getCheckInDate())) {
+            throw new IllegalArgumentException("checkOutDate must be after checkInDate");
+        }
 
+        User user = authService.findByIdOrThrow(request.getCustomer());
         Room room = entityManager.find(Room.class, request.getRoom());
         if (room == null) {
             throw new RuntimeException("Room not found with id: " + request.getRoom());
         }
-
         if (room.getStatus() != Room.RoomStatus.AVAILABLE) {
-            throw new RuntimeException("Room is not available");
+            throw new RuntimeException("Room is not available for booking");
         }
 
         Reservation reservation = new Reservation();
@@ -60,10 +74,7 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
         reservation.setCheckOutDate(request.getCheckOutDate());
         reservation.setStatus(Reservation.ReservationStatus.CONFIRMED);
 
-        // persist reservation
         save(reservation);
-
-        // mark room as booked
         room.setStatus(Room.RoomStatus.BOOKED);
         entityManager.merge(room);
 
@@ -76,8 +87,20 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
     }
 
     @Override
-    public boolean cancelReservation() {
-        return false;
+    public boolean cancelReservation(Long reservationId) {
+        Reservation reservation = findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found: " + reservationId));
+        if (reservation.getStatus() == Reservation.ReservationStatus.CANCELLED) {
+            return true;
+        }
+        reservation.setStatus(Reservation.ReservationStatus.CANCELLED);
+        entityManager.merge(reservation);
+        Room room = reservation.getRoom();
+        if (room != null && room.getStatus() == Room.RoomStatus.BOOKED) {
+            room.setStatus(Room.RoomStatus.AVAILABLE);
+            entityManager.merge(room);
+        }
+        return true;
     }
 
     @Override
@@ -98,12 +121,17 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
     private reservationResponse mapToReservationResponse(Reservation reservation) {
         reservationResponse response = new reservationResponse();
         response.setReservationId(reservation.getReservationId());
-        response.setCustomer(reservation.getUser().getUserId());
-        response.setRoom(reservation.getRoom());
+        response.setCustomer(reservation.getUser() != null ? reservation.getUser().getUserId() : null);
+        if (reservation.getRoom() != null) {
+            response.setRoomId(reservation.getRoom().getRoomId());
+            response.setRoomNumber(reservation.getRoom().getRoomNumber());
+        }
         response.setCheckInDate(reservation.getCheckInDate());
         response.setCheckOutDate(reservation.getCheckOutDate());
         response.setStatus(reservation.getStatus());
-        response.setBilling(reservation.getBilling());
+        response.setBillingId(reservation.getBilling() != null ? reservation.getBilling().getBillingId() : null);
+        response.setCreatedAt(reservation.getCreatedAt());
+        response.setUpdatedAt(reservation.getUpdatedAt());
         return response;
     }
 }

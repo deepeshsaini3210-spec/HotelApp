@@ -13,7 +13,7 @@ public interface ReservationService extends IBaseService<Reservation, Long> {
 
     reservationResponse updateReservation();
 
-    boolean cancelReservation();
+    boolean cancelReservation(Long reservationId);
 
     reservationResponse getReservationById(Long id);
 

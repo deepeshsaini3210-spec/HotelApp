@@ -8,5 +8,7 @@ public interface BillingService extends IBaseService<Billing, Long> {
 
     BillingResponse generateBilling(Long reservationId);
 
+    BillingResponse generateBillingForCheckout(Long reservationId);
+
     BillingResponse getBilling(Long reservationId);
 }

@@ -5,6 +5,7 @@ import com.grandstay.hotel.service.ReservationService;
 import com.grandstay.hotel.util.wrappers.reservationRequest;
 import com.grandstay.hotel.util.wrappers.reservationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,7 +19,7 @@ public class ReservationControllerControllerImp implements ReservationController
     private ReservationService reservationService;
 
     @Override
-    public reservationResponse createCustomerAndUpdate(reservationRequest reservation) {
+    public reservationResponse createCustomerAndUpdate(@RequestBody reservationRequest reservation) {
         return reservationService.createCustomerAndUpdate(reservation);
     }
 
@@ -34,7 +35,7 @@ public class ReservationControllerControllerImp implements ReservationController
 
     @Override
     public Boolean reservationCancel(Long reservationId) {
-        return reservationService.cancelReservation();
+        return reservationService.cancelReservation(reservationId);
     }
 }
 

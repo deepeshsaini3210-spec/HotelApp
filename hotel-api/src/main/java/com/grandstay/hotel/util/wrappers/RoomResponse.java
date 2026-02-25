@@ -4,8 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.grandstay.hotel.model.HousekeepingTask;
-import com.grandstay.hotel.model.Reservation;
+import com.grandstay.hotel.util.wrappers.reservationResponse;
 import com.grandstay.hotel.model.Room.RoomStatus;
 import com.grandstay.hotel.model.Room.RoomType;
 
@@ -28,9 +27,9 @@ public class RoomResponse {
 
     private String hotelCity;
 
-    private List<Reservation> reservations;
+    private List<reservationResponse> reservations;
 
-    private List<HousekeepingTask> housekeepingTasks;
+    private List<Long> housekeepingTasks;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

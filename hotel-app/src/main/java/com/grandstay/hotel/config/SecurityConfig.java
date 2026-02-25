@@ -38,20 +38,30 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http.csrf(AbstractHttpConfigurer::disable)
+        http.cors(cors -> {})
+                .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/reservation/**")
+                        .requestMatchers("/rest/auth/**").permitAll()
+                        .requestMatchers("/rest/reservation/**")
                         .hasAnyRole("ADMIN", "CUSTOMER", "FRONT_DESK")
-                        .requestMatchers("/admin/**", "/Admin/**")
+
+                        .requestMatchers("/rest/admin/**", "/rest/Admin/**")
                         .hasRole("ADMIN")
-                        .requestMatchers("/customer/**")
+
+                        .requestMatchers("/rest/customer/**")
                         .hasAnyRole("CUSTOMER","ADMIN")
-                        .requestMatchers("/frontdesk/**")
+
+                        .requestMatchers("/rest/frontdesk/**")
                         .hasAnyRole("FRONT_DESK","ADMIN")
+
+                        .requestMatchers("/rest/room/**")
+                        .hasAnyRole("ADMIN","CUSTOMER","FRONT_DESK")
+
+                        .requestMatchers("/rest/housekeeping/**").hasAnyRole("ADMIN","FRONT_DESK","HOUSEKEEPING")
+                        .requestMatchers("/rest/billing/**").hasAnyRole("ADMIN","FRONT_DESK")
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

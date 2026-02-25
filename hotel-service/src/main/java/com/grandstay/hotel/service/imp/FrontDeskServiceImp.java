@@ -24,12 +24,17 @@ public class FrontDeskServiceImp implements FrontDeskService {
     private reservationResponse mapToReservationResponse(Reservation reservation) {
         reservationResponse response = new reservationResponse();
         response.setReservationId(reservation.getReservationId());
-        response.setCustomer(reservation.getUser().getUserId());
-        response.setRoom(reservation.getRoom());
+        response.setCustomer(reservation.getUser() != null ? reservation.getUser().getUserId() : null);
+        if (reservation.getRoom() != null) {
+            response.setRoomId(reservation.getRoom().getRoomId());
+            response.setRoomNumber(reservation.getRoom().getRoomNumber());
+        }
         response.setCheckInDate(reservation.getCheckInDate());
         response.setCheckOutDate(reservation.getCheckOutDate());
         response.setStatus(reservation.getStatus());
-        response.setBilling(reservation.getBilling());
+        if (reservation.getBilling() != null) response.setBillingId(reservation.getBilling().getBillingId());
+        response.setCreatedAt(reservation.getCreatedAt());
+        response.setUpdatedAt(reservation.getUpdatedAt());
         return response;
     }
 
@@ -53,12 +58,19 @@ public class FrontDeskServiceImp implements FrontDeskService {
 
     @Override
     public reservationResponse getCheckout(Long reservationId) {
-        Reservation reservation=entityManager.createNamedQuery("findById", Reservation.class)
+        Reservation reservation = entityManager.createNamedQuery("findById", Reservation.class)
                 .setParameter("reservationId", reservationId)
                 .getSingleResult();
         reservation.setStatus(Reservation.ReservationStatus.CHECKED_OUT);
         reservation.setCheckOutDate(LocalDate.now());
         entityManager.merge(reservation);
+
+        // Free the room so it becomes available for next booking
+        Room room = reservation.getRoom();
+        if (room != null && room.getStatus() == Room.RoomStatus.BOOKED) {
+            room.setStatus(Room.RoomStatus.AVAILABLE);
+            entityManager.merge(room);
+        }
         return mapToReservationResponse(reservation);
     }
 
@@ -89,14 +101,24 @@ public class FrontDeskServiceImp implements FrontDeskService {
 
         RoomResponse response=new RoomResponse();
         response.setRoomId(room.getRoomId());
-        response.setReservations(room.getReservations());
         response.setStatus(room.getStatus());
         response.setRoomNumber(room.getRoomNumber());
         response.setRoomType(room.getRoomType());
         response.setHotelCity(room.getHotelCity());
         response.setCreatedAt(room.getCreatedAt());
         response.setUpdatedAt(room.getUpdatedAt());
-        response.setReservations(room.getReservations());
+        if (room.getReservations() != null) {
+            List<reservationResponse> resList = new ArrayList<>();
+            for (Reservation r : room.getReservations()) {
+                resList.add(mapToReservationResponse(r));
+            }
+            response.setReservations(resList);
+        }
+        if (room.getHousekeepingTasks() != null) {
+            List<Long> hkIds = new ArrayList<>();
+            room.getHousekeepingTasks().forEach(h -> hkIds.add(h.getTaskId()));
+            response.setHousekeepingTasks(hkIds);
+        }
         return response;
     }
 }

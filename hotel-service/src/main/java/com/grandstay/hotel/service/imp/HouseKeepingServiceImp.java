@@ -24,7 +24,7 @@ public class HouseKeepingServiceImp implements HouseKeepingService {
         }
         if (task.getRoom() != null) hk.setRoom(task.getRoom());
         hk.setTaskType(task.getTaskType());
-        hk.setStatus(task.getStatus() == null ? HousekeepingTask.TaskStatus.PENDING : task.getStatus());
+        hk.setStatus(task.getStatus() == null ? HousekeepingTask.TaskStatus.values()[0] : task.getStatus());
         hk.setAssignedTo(task.getAssignedTo());
         entityManager.persist(hk);
         return mapToResponse(hk);
@@ -51,9 +51,12 @@ public class HouseKeepingServiceImp implements HouseKeepingService {
     public HouseKeepingResponse updateTaskStatus(Long taskId) {
         HousekeepingTask hk = entityManager.find(HousekeepingTask.class, taskId);
         if (hk == null) throw new RuntimeException("Housekeeping task not found: " + taskId);
-        // advance status: PENDING -> IN_PROGRESS -> COMPLETED
-        if (hk.getStatus() == HousekeepingTask.TaskStatus.PENDING) hk.setStatus(HousekeepingTask.TaskStatus.IN_PROGRESS);
-        else if (hk.getStatus() == HousekeepingTask.TaskStatus.IN_PROGRESS) hk.setStatus(HousekeepingTask.TaskStatus.COMPLETED);
+        // advance status to next enum value (e.g. PENDING -> IN_PROGRESS -> COMPLETED)
+        HousekeepingTask.TaskStatus[] values = HousekeepingTask.TaskStatus.values();
+        int nextOrdinal = hk.getStatus().ordinal() + 1;
+        if (nextOrdinal < values.length) {
+            hk.setStatus(values[nextOrdinal]);
+        }
         entityManager.merge(hk);
         return mapToResponse(hk);
     }
