@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 
 import com.grandstay.hotel.model.Reservation.ReservationStatus;
 
-import com.grandstay.hotel.model.Room;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

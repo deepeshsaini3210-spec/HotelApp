@@ -1,5 +1,9 @@
-package com.grandstay.hotel.model;
+package com.grandstay.hotel.wrapper;
 
+
+import lombok.Data;
+
+@Data
 public class ErrorResponse {
 
     private String message;
