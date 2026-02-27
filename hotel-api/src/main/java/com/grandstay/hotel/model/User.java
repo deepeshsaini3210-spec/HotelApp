@@ -19,7 +19,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @NamedQueries({
     @NamedQuery(name = "findByEmail", query = "SELECT u FROM User u WHERE u.email = :email"),
     @NamedQuery(name = "findUserById", query = "SELECT u FROM User u WHERE u.userId = :userId"),
-    @NamedQuery(name = "findAllUsers", query = "SELECT u FROM User u")
+    @NamedQuery(name = "findAllUsers", query = "SELECT u FROM User u"),
+    @NamedQuery(name = "findUsersByRole", query = "SELECT u FROM User u WHERE u.role = :role ORDER BY u.name")
 })
 @Entity
 @Table(name = "users")

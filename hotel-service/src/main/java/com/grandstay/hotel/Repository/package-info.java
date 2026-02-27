@@ -1,4 +1,4 @@
 /**
  * Database access (interfaces + implementations).
  */
-package com.grandstay.hotel.Repository;
+package com.grandstay.hotel.repository;

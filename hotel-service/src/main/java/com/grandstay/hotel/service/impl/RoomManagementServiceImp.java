@@ -1,10 +1,13 @@
 package com.grandstay.hotel.service.imp;
 
+import com.grandstay.hotel.exceptions.BadRequestException;
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
 import com.grandstay.hotel.generic.Impl.BaseServiceImp;
 import com.grandstay.hotel.model.Room;
 import com.grandstay.hotel.service.RoomManagementService;
 import com.grandstay.hotel.util.wrappers.RoomRequest;
 import com.grandstay.hotel.util.wrappers.RoomResponse;
+import com.grandstay.hotel.util.wrappers.UpdateRoomRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
@@ -13,7 +16,7 @@ import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
 import com.grandstay.hotel.model.Reservation;
 
 @Service
@@ -31,7 +34,7 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
     @Override
     public RoomResponse createRoom(RoomRequest roomRequest) {
         if (roomRequest == null) {
-            throw new IllegalArgumentException("RoomRequest cannot be null");
+            throw new BadRequestException("RoomRequest cannot be null");
         }
         Room.RoomType roomType = parseRoomType(roomRequest.getRoomType());
         Room.RoomStatus status = parseRoomStatus(roomRequest.getStatus());
@@ -64,9 +67,17 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
     }
 
     @Override
-    public RoomResponse updateRoomsById(Long roomId) {
+    public RoomResponse updateRoom(Long roomId, UpdateRoomRequest request) {
         com.grandstay.hotel.model.Room room = entityManager.find(com.grandstay.hotel.model.Room.class, roomId);
-        if (room == null) throw new RuntimeException("Room not found: " + roomId);
+        if (room == null) throw new ResourceNotFoundException("Room", roomId);
+        if (request != null) {
+            if (request.getStatus() != null && !request.getStatus().isBlank()) {
+                room.setStatus(Room.RoomStatus.valueOf(request.getStatus().trim().toUpperCase()));
+            }
+            if (request.getPricePerNight() != null && request.getPricePerNight().compareTo(BigDecimal.ZERO) >= 0) {
+                room.setPricePerNight(request.getPricePerNight());
+            }
+        }
         entityManager.merge(room);
         return mapToRoomResponse(room);
     }
@@ -74,7 +85,24 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
     @Override
     public RoomResponse deleteRoomsById(Long roomId) {
         com.grandstay.hotel.model.Room room = entityManager.find(com.grandstay.hotel.model.Room.class, roomId);
-        if (room == null) throw new RuntimeException("Room not found: " + roomId);
+        if (room == null) throw new ResourceNotFoundException("Room", roomId);
+        // Block delete only if any reservation is CONFIRMED or CHECKED_IN (active)
+        if (room.getReservations() != null) {
+            boolean hasActive = room.getReservations().stream()
+                    .anyMatch(res -> res.getStatus() == Reservation.ReservationStatus.CONFIRMED
+                            || res.getStatus() == Reservation.ReservationStatus.CHECKED_IN);
+            if (hasActive) {
+                throw new com.grandstay.hotel.exceptions.ConflictException("Cannot delete room with CONFIRMED or CHECKED_IN reservation. Complete or cancel them first.");
+            }
+            // Detach past reservations from room so we can delete the room
+            for (Reservation res : new ArrayList<>(room.getReservations())) {
+                res.setRoom(null);
+                entityManager.merge(res);
+            }
+        }
+        if (room.getHousekeepingTasks() != null && !room.getHousekeepingTasks().isEmpty()) {
+            throw new com.grandstay.hotel.exceptions.ConflictException("Cannot delete room with pending housekeeping tasks");
+        }
         RoomResponse resp = mapToRoomResponse(room);
         entityManager.remove(room);
         return resp;
@@ -84,7 +112,7 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
     public RoomResponse updateRoomsPrice(Long roomId) {
         // Simple example: increase price by 10%
         com.grandstay.hotel.model.Room room = entityManager.find(com.grandstay.hotel.model.Room.class, roomId);
-        if (room == null) throw new RuntimeException("Room not found: " + roomId);
+        if (room == null) throw new ResourceNotFoundException("Room", roomId);
         if (room.getPricePerNight() != null) {
             java.math.BigDecimal current = room.getPricePerNight();
             java.math.BigDecimal increased = current.multiply(java.math.BigDecimal.valueOf(1.10));
@@ -97,7 +125,7 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
     @Override
     public RoomResponse updateRoomstatus(Long roomId,String status) {
         com.grandstay.hotel.model.Room room = entityManager.find(com.grandstay.hotel.model.Room.class, roomId);
-        if (room == null) throw new RuntimeException("Room not found: " + roomId);
+        if (room == null) throw new ResourceNotFoundException("Room", roomId);
         room.setStatus(Room.RoomStatus.valueOf(status.trim().toUpperCase()));
         entityManager.merge(room);
         return mapToRoomResponse(room);
@@ -112,9 +140,9 @@ public class RoomManagementServiceImp extends BaseServiceImp<Room, Long> impleme
         response.setStatus(room.getStatus());
         response.setHotelCity(room.getHotelCity());
         if (room.getReservations() != null) {
-            List<reservationResponse> resList = new ArrayList<>();
+            List<ReservationResponse> resList = new ArrayList<>();
             for (Reservation r : room.getReservations()) {
-                reservationResponse rr = new reservationResponse();
+                ReservationResponse rr = new ReservationResponse();
                 rr.setReservationId(r.getReservationId());
                 if (r.getUser() != null) rr.setCustomer(r.getUser().getUserId());
                 rr.setRoomId(room.getRoomId());

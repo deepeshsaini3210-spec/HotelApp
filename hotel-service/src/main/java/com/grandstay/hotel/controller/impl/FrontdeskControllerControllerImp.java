@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.grandstay.hotel.controller.FrontdeskController;
 import com.grandstay.hotel.service.FrontDeskService;
 import com.grandstay.hotel.util.wrappers.RoomResponse;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,17 +19,17 @@ public class FrontdeskControllerControllerImp implements FrontdeskController {
     private FrontDeskService frontDeskService;
     
     @Override
-    public reservationResponse getCheckin(Long reservationId) {
+    public ReservationResponse getCheckin(Long reservationId) {
         return frontDeskService.getCheckin(reservationId);
     }
 
     @Override
-    public reservationResponse getCheckout(Long reservationId) {
+    public ReservationResponse getCheckout(Long reservationId) {
         return frontDeskService.getCheckout(reservationId);
     }
 
     @Override
-    public List<reservationResponse> getReservationToday() {
+    public List<ReservationResponse> getReservationToday() {
         return frontDeskService.getReservationToday();
     }
 

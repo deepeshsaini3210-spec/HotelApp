@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 
 import com.grandstay.annotations.SFApiResponses;
 import com.grandstay.hotel.util.wrappers.RoomResponse;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
 
 
 @FeignClient(name = "frontDeskController",url ="${hotel-app-service.url}" ,path="frontdesk")
@@ -22,15 +22,15 @@ public interface FrontdeskController {
 //     PUT /frontdesk/assign-room/{reservationId}
     @SFApiResponses
     @PostMapping("/checkin/{reservationId}")
-    public reservationResponse getCheckin(@PathVariable Long reservationId);
+    public ReservationResponse getCheckin(@PathVariable Long reservationId);
 
     @SFApiResponses
     @PostMapping("/checkout/{reservationId}")
-    public reservationResponse getCheckout(@PathVariable Long reservationId);
+    public ReservationResponse getCheckout(@PathVariable Long reservationId);
 
     @SFApiResponses
     @GetMapping("/reservations/today")
-    public List<reservationResponse> getReservationToday();
+    public List<ReservationResponse> getReservationToday();
 
     @SFApiResponses
     @PutMapping("/assign-room/{reservationId}")

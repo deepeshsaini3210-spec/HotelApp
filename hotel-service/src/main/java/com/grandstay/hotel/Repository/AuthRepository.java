@@ -1,5 +1,6 @@
-package com.grandstay.hotel.Repository;
+package com.grandstay.hotel.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.grandstay.hotel.model.User;
@@ -11,5 +12,7 @@ import org.springframework.stereotype.Repository;
 public interface AuthRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(@Param("email") String email);
+
+    List<User> findByRoleOrderByNameAsc(@Param("role") User.Roles role);
 }
 

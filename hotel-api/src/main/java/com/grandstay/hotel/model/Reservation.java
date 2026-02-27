@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -77,7 +78,14 @@ public class Reservation {
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
+    @Column(name = "file_url")
+    @NotNull
+    private String fileUrl;
+
+    @NotNull
     private LocalDate checkInDate;
+
+    @NotNull
     private LocalDate checkOutDate;
 
     @Enumerated(EnumType.STRING)

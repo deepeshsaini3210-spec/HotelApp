@@ -1,4 +1,4 @@
-package com.grandstay.hotel.Repository;
+package com.grandstay.hotel.repository;
 
 import com.grandstay.hotel.model.Billing;
 import org.springframework.data.jpa.repository.JpaRepository;

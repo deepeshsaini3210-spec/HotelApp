@@ -1,5 +1,6 @@
 package com.grandstay.hotel.service.imp;
 
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
 import com.grandstay.hotel.model.Room;
 import com.grandstay.hotel.service.RoomService;
 import com.grandstay.hotel.util.wrappers.RoomResponse;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
 import com.grandstay.hotel.model.Reservation;
 
 
@@ -25,11 +26,13 @@ public class RoomServiceImp implements RoomService {
     public List<RoomResponse> roomAvailable(String city, LocalDate checkInDate, LocalDate checkOutDate, Room.RoomType roomType) {
         EntityManager em = entityManager;
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT DISTINCT r FROM Room r LEFT JOIN r.reservations res WHERE r.status = 'AVAILABLE'");
+        // Only consider non-CANCELLED reservations for date overlap, so cancelled rooms show as available
+        sb.append("SELECT DISTINCT r FROM Room r WHERE r.status = 'AVAILABLE'");
         if (city != null && !city.isBlank()) sb.append(" AND r.hotelCity = :city");
         if (roomType != null) sb.append(" AND r.roomType = :roomType");
+        // Only exclude rooms that have CONFIRMED or CHECKED_IN reservation overlapping the dates
         if (checkInDate != null && checkOutDate != null) {
-            sb.append(" AND (res IS NULL OR NOT (res.checkInDate <= :checkOut AND res.checkOutDate >= :checkIn))");
+            sb.append(" AND NOT EXISTS (SELECT 1 FROM Reservation res WHERE res.room = r AND res.status IN ('CONFIRMED', 'CHECKED_IN') AND res.checkInDate <= :checkOut AND res.checkOutDate >= :checkIn)");
         }
         var q = em.createQuery(sb.toString(), Room.class);
         if (city != null && !city.isBlank()) q.setParameter("city", city);
@@ -46,7 +49,7 @@ public class RoomServiceImp implements RoomService {
     public RoomResponse roomById(Long roomId) {
         jakarta.persistence.EntityManager em = entityManager;
         Room room = em.find(Room.class, roomId);
-        if (room == null) throw new RuntimeException("Room not found: " + roomId);
+        if (room == null) throw new ResourceNotFoundException("Room", roomId);
         return mapToResponse(room);
     }
 
@@ -59,9 +62,9 @@ public class RoomServiceImp implements RoomService {
         response.setStatus(room.getStatus());
         response.setHotelCity(room.getHotelCity());
         if (room.getReservations() != null) {
-            List<reservationResponse> resList = new ArrayList<>();
+            List<ReservationResponse> resList = new ArrayList<>();
             for (Reservation r : room.getReservations()){
-                reservationResponse rr = new reservationResponse();
+                ReservationResponse rr = new ReservationResponse();
                 rr.setReservationId(r.getReservationId());
                 if (r.getUser() != null) rr.setCustomer(r.getUser().getUserId());
                 rr.setRoomId(room.getRoomId());

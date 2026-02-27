@@ -44,26 +44,28 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/rest/auth/**").permitAll()
-                        .requestMatchers("/rest/reservation/**")
-                        .hasAnyRole("ADMIN", "CUSTOMER", "FRONT_DESK")
+                    .anyRequest().permitAll())
+                // .authorizeHttpRequests(auth -> auth
+                //         .requestMatchers("/rest/auth/**").permitAll()
+                //         .requestMatchers("/rest/reservation/**")
+                //         .hasAnyRole("ADMIN", "CUSTOMER", "FRONT_DESK")
 
-                        .requestMatchers("/rest/admin/**", "/rest/Admin/**")
-                        .hasRole("ADMIN")
+                //         .requestMatchers("/rest/admin/**", "/rest/Admin/**")
+                //         .hasRole("ADMIN")
 
-                        .requestMatchers("/rest/customer/**")
-                        .hasAnyRole("CUSTOMER","ADMIN")
+                //         .requestMatchers("/rest/customer/**")
+                //         .hasAnyRole("CUSTOMER","ADMIN")
 
-                        .requestMatchers("/rest/frontdesk/**")
-                        .hasAnyRole("FRONT_DESK","ADMIN")
+                //         .requestMatchers("/rest/frontdesk/**")
+                //         .hasAnyRole("FRONT_DESK","ADMIN")
 
-                        .requestMatchers("/rest/room/**")
-                        .hasAnyRole("ADMIN","CUSTOMER","FRONT_DESK")
+                //         .requestMatchers("/rest/room/**")
+                //         .hasAnyRole("ADMIN","CUSTOMER","FRONT_DESK")
 
-                        .requestMatchers("/rest/housekeeping/**").hasAnyRole("ADMIN","FRONT_DESK","HOUSEKEEPING")
-                        .requestMatchers("/rest/billing/**").hasAnyRole("ADMIN","FRONT_DESK")
-                        .anyRequest().permitAll()
-                )
+                //         .requestMatchers("/rest/housekeeping/**").hasAnyRole("ADMIN","FRONT_DESK","HOUSEKEEPING")
+                //         .requestMatchers("/rest/billing/**").hasAnyRole("ADMIN","FRONT_DESK")
+                //         .anyRequest().permitAll()
+                // )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

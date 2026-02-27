@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class reservationResponse {
+public class ReservationResponse {
 
     private Long reservationId;
     private Long customer;
@@ -22,7 +22,11 @@ public class reservationResponse {
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
     private ReservationStatus status;
+    private String fileUrl;
     private Long billingId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
 }

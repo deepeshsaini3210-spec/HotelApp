@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class reservationRequest {
+public class ReservationRequest {
 
     private Long room;
     private Long customer;

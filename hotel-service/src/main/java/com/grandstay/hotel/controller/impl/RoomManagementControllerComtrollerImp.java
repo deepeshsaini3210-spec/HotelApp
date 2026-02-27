@@ -4,7 +4,9 @@ import com.grandstay.hotel.controller.RoomManagementController;
 import com.grandstay.hotel.service.RoomManagementService;
 import com.grandstay.hotel.util.wrappers.RoomRequest;
 import com.grandstay.hotel.util.wrappers.RoomResponse;
+import com.grandstay.hotel.util.wrappers.UpdateRoomRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,8 +32,8 @@ public class RoomManagementControllerComtrollerImp implements RoomManagementCont
     }
 
     @Override
-    public RoomResponse updateRoomsById(Long roomId) {
-        return roomManagementService.updateRoomsById(roomId);
+    public RoomResponse updateRoom(@PathVariable Long roomId, @RequestBody(required = false) UpdateRoomRequest request) {
+        return roomManagementService.updateRoom(roomId, request);
     }
 
     @Override

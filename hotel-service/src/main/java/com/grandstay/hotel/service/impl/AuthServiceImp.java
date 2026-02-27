@@ -1,4 +1,4 @@
-package com.grandstay.hotel.service.imp;
+package com.grandstay.hotel.service.impl;
 
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -6,9 +6,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.grandstay.hotel.exceptions.ConflictException;
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
+import com.grandstay.hotel.exceptions.UnauthorizedException;
 import com.grandstay.hotel.generic.Impl.BaseServiceImp;
 import com.grandstay.hotel.model.User;
 import com.grandstay.hotel.service.AuthService;
+
 import com.grandstay.hotel.util.wrappers.UserLoginRequest;
 import com.grandstay.hotel.util.wrappers.UserRegisterRequest;
 import com.grandstay.hotel.util.wrappers.UserResponse;
@@ -29,18 +33,18 @@ public class AuthServiceImp extends BaseServiceImp<User, Long> implements AuthSe
 
     }
 
-    @Override
-    public Optional<User> findById(Long id) {
-        List<User> list = entityManager.createNamedQuery("findUserById", User.class)
-                .setParameter("userId", id)
-                .getResultList();
-        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
-    }
+    // @Override
+    // public Optional<User> findById(Long id) {
+    //     List<User> list = entityManager.createNamedQuery("findUserById", User.class)
+    //             .setParameter("userId", id)
+    //             .getResultList();
+    //     return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+    // }
 
-    @Override
-    public List<User> findAll() {
-        return entityManager.createNamedQuery("findAllUsers", User.class).getResultList();
-    }
+    // @Override
+    // public List<User> findAll() {
+    //     return entityManager.createNamedQuery("findAllUsers", User.class).getResultList();
+    // }
 
     @Override
     public Optional<User> findUserByEmail(String email) {
@@ -52,15 +56,15 @@ public class AuthServiceImp extends BaseServiceImp<User, Long> implements AuthSe
 
     @Override
     public UserResponse userlogin(UserLoginRequest request) {
-        User user = entityManager.createNamedQuery("findByEmail", User.class)
+        List<User> list = entityManager.createNamedQuery("findByEmail", User.class)
                 .setParameter("email", request.getEmail())
-                .getSingleResult();
-        if (user == null) {
-            throw new RuntimeException("User not found with email: " + request.getEmail());
+                .getResultList();
+        if (list.isEmpty()) {
+            throw new ResourceNotFoundException("User not found with email: " + request.getEmail());
         }
-
+        User user = list.get(0);
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new UnauthorizedException("Invalid password");
         }
         return mapToUserResponse(user);
     }
@@ -71,7 +75,7 @@ public class AuthServiceImp extends BaseServiceImp<User, Long> implements AuthSe
                 .setParameter("email", request.getEmail())
                 .getResultList();
         if (!existing.isEmpty()) {
-            throw new RuntimeException("Email already registered");
+            throw new ConflictException("Email already registered");
         }
         User user = User.builder()
                 .name(request.getName())

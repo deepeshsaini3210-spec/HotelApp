@@ -2,20 +2,22 @@ package com.grandstay.hotel.service;
 
 import com.grandstay.hotel.generic.IBaseService;
 import com.grandstay.hotel.model.Reservation;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
-import com.grandstay.hotel.util.wrappers.reservationRequest;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationRequest;
 
 import java.util.List;
 
+import org.springframework.web.multipart.MultipartFile;
+
 public interface ReservationService extends IBaseService<Reservation, Long> {
 
-    reservationResponse createCustomerAndUpdate(reservationRequest reservation);
+    ReservationResponse createCustomerAndUpdate(MultipartFile file, ReservationRequest reservation);
 
-    reservationResponse updateReservation();
+    ReservationResponse updateReservation();
 
     boolean cancelReservation(Long reservationId);
 
-    reservationResponse getReservationById(Long id);
+    ReservationResponse getReservationById(Long id);
 
-    List<reservationResponse> getReservationByCustomerId(Long customerId);
+    List<ReservationResponse> getReservationByCustomerId(Long customerId);
 }

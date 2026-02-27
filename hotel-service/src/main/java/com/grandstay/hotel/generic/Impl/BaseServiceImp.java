@@ -1,5 +1,6 @@
 package com.grandstay.hotel.generic.Impl;
 
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
 import com.grandstay.hotel.generic.IBaseService;
 import jakarta.persistence.EntityManager;
 
@@ -35,7 +36,7 @@ public abstract class BaseServiceImp<T, ID> implements IBaseService<T, ID> {
     @Override
     public T findByIdOrThrow(ID id) {
         return findById(id)
-                .orElseThrow(() -> new RuntimeException("Entity not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Entity not found with id: " + id));
     }
 
     @Override

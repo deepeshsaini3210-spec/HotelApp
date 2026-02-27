@@ -2,7 +2,7 @@ package com.grandstay.hotel.service;
 
 import com.grandstay.hotel.util.wrappers.HouseKeepingResponse;
 import com.grandstay.hotel.util.wrappers.HousekeepingRequest;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
 
 import java.util.List;
 

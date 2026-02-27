@@ -4,11 +4,14 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.grandstay.hotel.exceptions.ConflictException;
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
+import com.grandstay.hotel.model.Billing;
 import com.grandstay.hotel.model.Reservation;
 import com.grandstay.hotel.model.Room;
 import com.grandstay.hotel.service.FrontDeskService;
 import com.grandstay.hotel.util.wrappers.RoomResponse;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -21,8 +24,8 @@ public class FrontDeskServiceImp implements FrontDeskService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    private reservationResponse mapToReservationResponse(Reservation reservation) {
-        reservationResponse response = new reservationResponse();
+    private ReservationResponse mapToReservationResponse(Reservation reservation) {
+        ReservationResponse response = new ReservationResponse();
         response.setReservationId(reservation.getReservationId());
         response.setCustomer(reservation.getUser() != null ? reservation.getUser().getUserId() : null);
         if (reservation.getRoom() != null) {
@@ -32,6 +35,7 @@ public class FrontDeskServiceImp implements FrontDeskService {
         response.setCheckInDate(reservation.getCheckInDate());
         response.setCheckOutDate(reservation.getCheckOutDate());
         response.setStatus(reservation.getStatus());
+        response.setFileUrl(reservation.getFileUrl());
         if (reservation.getBilling() != null) response.setBillingId(reservation.getBilling().getBillingId());
         response.setCreatedAt(reservation.getCreatedAt());
         response.setUpdatedAt(reservation.getUpdatedAt());
@@ -39,16 +43,19 @@ public class FrontDeskServiceImp implements FrontDeskService {
     }
 
     @Override
-    public reservationResponse getCheckin(Long reservationId) {
-        Reservation reservation = entityManager.createNamedQuery("findById", Reservation.class)
+    public ReservationResponse getCheckin(Long reservationId) {
+        List<Reservation> list = entityManager.createNamedQuery("findById", Reservation.class)
                 .setParameter("reservationId", reservationId)
-                .getSingleResult();
-        // Must be CONFIRMED to check-in; cannot check-in twice
+                .getResultList();
+        if (list.isEmpty()) {
+            throw new ResourceNotFoundException("Reservation", reservationId);
+        }
+        Reservation reservation = list.get(0);
         if (reservation.getStatus() == Reservation.ReservationStatus.CHECKED_IN) {
-            throw new RuntimeException("Reservation already checked in");
+            throw new ConflictException("Reservation already checked in");
         }
         if (reservation.getStatus() != Reservation.ReservationStatus.CONFIRMED) {
-            throw new RuntimeException("Reservation is not in a state that allows check-in. Expected CONFIRMED");
+            throw new ConflictException("Reservation is not in a state that allows check-in. Expected CONFIRMED");
         }
 
         reservation.setStatus(Reservation.ReservationStatus.CHECKED_IN);
@@ -57,13 +64,24 @@ public class FrontDeskServiceImp implements FrontDeskService {
     }
 
     @Override
-    public reservationResponse getCheckout(Long reservationId) {
-        Reservation reservation = entityManager.createNamedQuery("findById", Reservation.class)
+    public ReservationResponse getCheckout(Long reservationId) {
+        List<Reservation> list = entityManager.createNamedQuery("findById", Reservation.class)
                 .setParameter("reservationId", reservationId)
-                .getSingleResult();
+                .getResultList();
+        if (list.isEmpty()) {
+            throw new ResourceNotFoundException("Reservation", reservationId);
+        }
+        Reservation reservation = list.get(0);
         reservation.setStatus(Reservation.ReservationStatus.CHECKED_OUT);
         reservation.setCheckOutDate(LocalDate.now());
         entityManager.merge(reservation);
+
+        // Mark billing as PAID when guest checks out (so it counts in Total Revenue)
+        Billing billing = reservation.getBilling();
+        if (billing != null) {
+            billing.setPaymentStatus(Billing.PaymentStatus.PAID);
+            entityManager.merge(billing);
+        }
 
         // Free the room so it becomes available for next booking
         Room room = reservation.getRoom();
@@ -75,11 +93,11 @@ public class FrontDeskServiceImp implements FrontDeskService {
     }
 
     @Override
-    public List<reservationResponse> getReservationToday() {
+    public List<ReservationResponse> getReservationToday() {
         List<Reservation> reservation=entityManager.createNamedQuery("findToday",Reservation.class)
                 .setParameter("CURRENT_DATE",LocalDate.now())
                 .getResultList();
-        List<reservationResponse> responseList=new ArrayList<>();
+        List<ReservationResponse> responseList=new ArrayList<>();
         for(Reservation reservations:reservation){
             responseList.add(mapToReservationResponse(reservations));
         }
@@ -108,7 +126,7 @@ public class FrontDeskServiceImp implements FrontDeskService {
         response.setCreatedAt(room.getCreatedAt());
         response.setUpdatedAt(room.getUpdatedAt());
         if (room.getReservations() != null) {
-            List<reservationResponse> resList = new ArrayList<>();
+            List<ReservationResponse> resList = new ArrayList<>();
             for (Reservation r : room.getReservations()) {
                 resList.add(mapToReservationResponse(r));
             }

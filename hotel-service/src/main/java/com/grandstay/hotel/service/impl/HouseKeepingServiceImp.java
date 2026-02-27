@@ -1,5 +1,6 @@
 package com.grandstay.hotel.service.imp;
 
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
 import com.grandstay.hotel.model.HousekeepingTask;
 import com.grandstay.hotel.service.HouseKeepingService;
 import com.grandstay.hotel.util.wrappers.HouseKeepingResponse;
@@ -7,10 +8,12 @@ import com.grandstay.hotel.util.wrappers.HousekeepingRequest;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class HouseKeepingServiceImp implements HouseKeepingService {
     @Autowired
     private EntityManager entityManager;
@@ -32,7 +35,7 @@ public class HouseKeepingServiceImp implements HouseKeepingService {
 
     @Override
     public List<HouseKeepingResponse> getTasks() {
-        List<HousekeepingTask> tasks = entityManager.createQuery("SELECT h FROM HousekeepingTask h", HousekeepingTask.class)
+        List<HousekeepingTask> tasks = entityManager.createQuery("SELECT h FROM HousekeepingTask h ORDER BY h.createdAt DESC", HousekeepingTask.class)
                 .getResultList();
         return tasks.stream().map(this::mapToResponse).toList();
     }
@@ -43,14 +46,14 @@ public class HouseKeepingServiceImp implements HouseKeepingService {
                 .setParameter("roomId", roomId)
                 .setMaxResults(1)
                 .getResultList();
-        if (tasks.isEmpty()) throw new RuntimeException("No housekeeping tasks found for room: " + roomId);
+        if (tasks.isEmpty()) throw new ResourceNotFoundException("No housekeeping tasks found for room: " + roomId);
         return mapToResponse(tasks.get(0));
     }
 
     @Override
     public HouseKeepingResponse updateTaskStatus(Long taskId) {
         HousekeepingTask hk = entityManager.find(HousekeepingTask.class, taskId);
-        if (hk == null) throw new RuntimeException("Housekeeping task not found: " + taskId);
+        if (hk == null) throw new ResourceNotFoundException("Housekeeping task not found: " + taskId);
         // advance status to next enum value (e.g. PENDING -> IN_PROGRESS -> COMPLETED)
         HousekeepingTask.TaskStatus[] values = HousekeepingTask.TaskStatus.values();
         int nextOrdinal = hk.getStatus().ordinal() + 1;

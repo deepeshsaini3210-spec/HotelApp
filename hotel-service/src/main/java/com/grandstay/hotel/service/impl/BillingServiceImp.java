@@ -1,18 +1,24 @@
 package com.grandstay.hotel.service.imp;
 
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
 import com.grandstay.hotel.generic.Impl.BaseServiceImp;
 import com.grandstay.hotel.model.Billing;
 import com.grandstay.hotel.model.Reservation;
 import com.grandstay.hotel.model.Room;
 import com.grandstay.hotel.service.BillingService;
 import com.grandstay.hotel.util.wrappers.BillingResponse;
+import com.grandstay.hotel.util.wrappers.BillingSummaryResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -43,7 +49,7 @@ public class BillingServiceImp extends BaseServiceImp<Billing, Long> implements 
         List<Reservation> list = entityManager.createNamedQuery("findById", Reservation.class)
                 .setParameter("reservationId", reservationId)
                 .getResultList();
-        if (list.isEmpty()) throw new RuntimeException("Reservation not found: " + reservationId);
+        if (list.isEmpty()) throw new ResourceNotFoundException("Reservation", reservationId);
         Reservation reservation = list.get(0);
 
         java.time.LocalDate in = reservation.getCheckInDate();
@@ -74,25 +80,18 @@ public class BillingServiceImp extends BaseServiceImp<Billing, Long> implements 
         return mapToBillingResponse(billing);
     }
 
+    /** Generate bill only; does NOT checkout the room or set payment to PAID. Use Check-out action to checkout. */
     @Override
     public BillingResponse generateBillingForCheckout(Long reservationId) {
-        BillingResponse billingResponse = generateBilling(reservationId);
-        Billing billing = entityManager.find(Billing.class, billingResponse.getBillingId());
-        billing.setPaymentStatus(Billing.PaymentStatus.PAID);
-        entityManager.merge(billing);
+        return generateBilling(reservationId);
+    }
 
-        // Checkout: mark reservation CHECKED_OUT and free the room
-        Reservation reservation = billing.getReservation();
-        if (reservation != null) {
-            reservation.setStatus(Reservation.ReservationStatus.CHECKED_OUT);
-            entityManager.merge(reservation);
-            Room room = reservation.getRoom();
-            if (room != null && room.getStatus() == Room.RoomStatus.BOOKED) {
-                room.setStatus(Room.RoomStatus.AVAILABLE);
-                entityManager.merge(room);
-            }
-        }
-        return mapToBillingResponse(billing);
+    @Override
+    public List<BillingResponse> getPaidBillings() {
+        return entityManager.createNamedQuery("findPaidBillings", Billing.class)
+                .getResultList().stream()
+                .map(this::mapToBillingResponse)
+                .toList();
     }
 
     @Override
@@ -101,9 +100,28 @@ public class BillingServiceImp extends BaseServiceImp<Billing, Long> implements 
                 .setParameter("reservationId", reservationId)
                 .getResultList();
         if (list.isEmpty()) {
-            throw new RuntimeException("Billing not found for reservationId: " + reservationId);
+            throw new ResourceNotFoundException("Billing not found for reservationId: " + reservationId);
         }
         return mapToBillingResponse(list.get(0));
+    }
+
+    @Override
+    public BillingSummaryResponse getBillingSummary() {
+        List<Billing> paid = entityManager.createNamedQuery("findPaidBillings", Billing.class).getResultList();
+        Map<String, BigDecimal> paidByMonth = new HashMap<>();
+        DateTimeFormatter monthKey = DateTimeFormatter.ofPattern("yyyy-MM");
+        for (Billing b : paid) {
+            LocalDateTime createdAt = b.getCreatedAt();
+            if (createdAt == null) continue;
+            String key = createdAt.format(monthKey);
+            BigDecimal roomCharges = b.getRoomCharges() != null ? b.getRoomCharges() : BigDecimal.ZERO;
+            paidByMonth.merge(key, roomCharges, BigDecimal::add);
+        }
+        List<Billing> unpaid = entityManager.createNamedQuery("findUnpaidBillings", Billing.class).getResultList();
+        BigDecimal unpaidTotal = unpaid.stream()
+                .map(b -> b.getRoomCharges() != null ? b.getRoomCharges() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new BillingSummaryResponse(paidByMonth, unpaidTotal);
     }
 
     private BillingResponse mapToBillingResponse(Billing billing) {

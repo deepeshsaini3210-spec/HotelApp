@@ -12,7 +12,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 @NamedQueries({
     @NamedQuery(name = "findByReservationId", query = "SELECT b FROM Billing b WHERE b.reservation.reservationId = :reservationId"),
     @NamedQuery(name = "findBillingById", query = "SELECT b FROM Billing b WHERE b.billingId = :billingId"),
-    @NamedQuery(name = "findAllBillings", query = "SELECT b FROM Billing b")
+    @NamedQuery(name = "findAllBillings", query = "SELECT b FROM Billing b"),
+    @NamedQuery(name = "findPaidBillings", query = "SELECT b FROM Billing b WHERE b.paymentStatus = 'PAID'"),
+    @NamedQuery(name = "findUnpaidBillings", query = "SELECT b FROM Billing b WHERE b.paymentStatus = 'PENDING'")
 })
 @Entity
 @Table(name = "BILLING")

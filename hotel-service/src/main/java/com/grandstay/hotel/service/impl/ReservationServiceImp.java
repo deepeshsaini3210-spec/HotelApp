@@ -1,14 +1,19 @@
 package com.grandstay.hotel.service.imp;
 
+import com.grandstay.hotel.exceptions.BadRequestException;
+import com.grandstay.hotel.exceptions.ConflictException;
+import com.grandstay.hotel.exceptions.ResourceNotFoundException;
 import com.grandstay.hotel.generic.Impl.BaseServiceImp;
 import com.grandstay.hotel.model.Reservation;
 import com.grandstay.hotel.service.ReservationService;
-import com.grandstay.hotel.util.wrappers.reservationResponse;
-import com.grandstay.hotel.util.wrappers.reservationRequest;
+import com.grandstay.hotel.util.wrappers.ReservationResponse;
+import com.grandstay.hotel.util.wrappers.ReservationRequest;
 import com.grandstay.hotel.model.Room;
 import com.grandstay.hotel.model.User;
+import com.grandstay.hotel.integration.Service.StorageMiniOService;
 import com.grandstay.hotel.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -27,6 +32,9 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private StorageMiniOService storageMiniOService;
     @Override
     public Optional<Reservation> findById(Long id) {
         List<Reservation> list = entityManager.createNamedQuery("findById", Reservation.class)
@@ -41,35 +49,46 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
     }
 
     @Override
-    public reservationResponse createCustomerAndUpdate(reservationRequest request) {
+    public ReservationResponse createCustomerAndUpdate(MultipartFile file, ReservationRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("reservationRequest cannot be null");
+            throw new BadRequestException("ReservationRequest cannot be null");
         }
         if (request.getCustomer() == null) {
-            throw new IllegalArgumentException("customer id is required");
+            throw new BadRequestException("customer id is required");
         }
         if (request.getRoom() == null) {
-            throw new IllegalArgumentException("room id is required");
+            throw new BadRequestException("room id is required");
         }
         if (request.getCheckInDate() == null || request.getCheckOutDate() == null) {
-            throw new IllegalArgumentException("checkInDate and checkOutDate are required");
+            throw new BadRequestException("checkInDate and checkOutDate are required");
         }
         if (!request.getCheckOutDate().isAfter(request.getCheckInDate())) {
-            throw new IllegalArgumentException("checkOutDate must be after checkInDate");
+            throw new BadRequestException("checkOutDate must be after checkInDate");
+        }
+        if (file == null) {
+            throw new BadRequestException("file is required");
         }
 
         User user = authService.findByIdOrThrow(request.getCustomer());
         Room room = entityManager.find(Room.class, request.getRoom());
         if (room == null) {
-            throw new RuntimeException("Room not found with id: " + request.getRoom());
+            throw new ResourceNotFoundException("Room", request.getRoom());
         }
         if (room.getStatus() != Room.RoomStatus.AVAILABLE) {
-            throw new RuntimeException("Room is not available for booking");
+            throw new ConflictException("Room is not available for booking");
+        }
+
+        String fileUrl;
+        try {
+            fileUrl = storageMiniOService.uploadFile(file);
+        } catch (Exception e) {
+            throw new BadRequestException("Failed to upload file: " + e.getMessage());
         }
 
         Reservation reservation = new Reservation();
         reservation.setUser(user);
         reservation.setRoom(room);
+        reservation.setFileUrl(fileUrl);
         reservation.setCheckInDate(request.getCheckInDate());
         reservation.setCheckOutDate(request.getCheckOutDate());
         reservation.setStatus(Reservation.ReservationStatus.CONFIRMED);
@@ -82,14 +101,14 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
     }
 
     @Override
-    public reservationResponse updateReservation() {
+    public ReservationResponse updateReservation() {
         return null;
     }
 
     @Override
     public boolean cancelReservation(Long reservationId) {
         Reservation reservation = findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reservation not found: " + reservationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation", reservationId));
         if (reservation.getStatus() == Reservation.ReservationStatus.CANCELLED) {
             return true;
         }
@@ -104,13 +123,13 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
     }
 
     @Override
-    public reservationResponse getReservationById(Long id) {
+    public ReservationResponse getReservationById(Long id) {
         Reservation reservation = findByIdOrThrow(id);
         return mapToReservationResponse(reservation);
     }
 
     @Override
-    public List<reservationResponse> getReservationByCustomerId(Long customerId) {
+    public List<ReservationResponse> getReservationByCustomerId(Long customerId) {
         return entityManager.createNamedQuery("findByUserId", Reservation.class)
                 .setParameter("userId", customerId)
                 .getResultList().stream()
@@ -118,8 +137,8 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
                 .toList();
     }
 
-    private reservationResponse mapToReservationResponse(Reservation reservation) {
-        reservationResponse response = new reservationResponse();
+    private ReservationResponse mapToReservationResponse(Reservation reservation) {
+        ReservationResponse response = new ReservationResponse();
         response.setReservationId(reservation.getReservationId());
         response.setCustomer(reservation.getUser() != null ? reservation.getUser().getUserId() : null);
         if (reservation.getRoom() != null) {
@@ -129,6 +148,7 @@ public class ReservationServiceImp extends BaseServiceImp<Reservation, Long> imp
         response.setCheckInDate(reservation.getCheckInDate());
         response.setCheckOutDate(reservation.getCheckOutDate());
         response.setStatus(reservation.getStatus());
+        response.setFileUrl(reservation.getFileUrl());
         response.setBillingId(reservation.getBilling() != null ? reservation.getBilling().getBillingId() : null);
         response.setCreatedAt(reservation.getCreatedAt());
         response.setUpdatedAt(reservation.getUpdatedAt());
