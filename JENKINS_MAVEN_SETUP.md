@@ -1,46 +1,22 @@
-# Jenkins par Maven setup (mvn: not found fix)
+# Jenkins – Build stage (Maven via Docker)
 
-Pipeline **Build** stage ke liye Jenkins ko Maven chahiye. Neeche dono mein se koi **ek** karo.
+Pipeline **Build** stage Maven ko **Docker container** ke andar chalaati hai. Isliye:
 
----
-
-## Option 1: Jenkins Global Tool Configuration (recommended)
-
-1. Jenkins dashboard → **Manage Jenkins** → **Global Tool Configuration**.
-2. **Maven** section tak scroll karo.
-3. **Add Maven** click karo.
-4. **Name** mein exactly ye likho: `M3`  
-   (Jenkinsfile mein `tools { maven 'M3' }` use ho raha hai, isliye name `M3` hona chahiye.)
-5. **Install automatically** select karo.
-6. **Save** karo.
-
-Iske baad pipeline dubara run karo; **Build** stage mein `mvn` mil jayega.
+- **Maven (M3) Jenkins par configure karne ki zaroorat nahi.**
+- **Docker** Jenkins server/agent par install hona chahiye, aur Jenkins user ko `docker run` chalane ki permission honi chahiye.
 
 ---
 
-## Option 2: Maven server par install karo
+## Zaroorat: Docker
 
-Agar Global Tool Configuration use nahi karna:
+Jenkins jis machine par chal raha hai (agent) wahan:
 
-**Ubuntu/Debian (Jenkins server par):**
-```bash
-sudo apt-get update
-sudo apt-get install -y maven
-```
+1. Docker installed ho: `docker --version`
+2. Jenkins process (jo jobs chalaati hai) ko Docker socket access ho – masalan agent same machine par ho jahan Docker daemon chal raha hai, aur jenkins user `docker` group mein ho:
 
-**RHEL/CentOS:**
-```bash
-sudo yum install -y maven
-```
+   ```bash
+   sudo usermod -aG docker jenkins
+   # then restart Jenkins
+   ```
 
-Phir Jenkinsfile se `tools { maven 'M3' }` block **hata do** (taaki pipeline system PATH wala `mvn` use kare):
-
-```groovy
-pipeline {
-    agent any
-    // tools { maven 'M3' }   <- comment out or delete
-    ...
-}
-```
-
-Save karke pipeline phir run karo.
+Agar **Build** stage mein `docker: not found` ya "permission denied" aaye, to pehle Docker install/configure karo, phir pipeline dubara chalao.

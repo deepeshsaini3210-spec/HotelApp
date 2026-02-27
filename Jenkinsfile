@@ -1,12 +1,6 @@
 pipeline {
     agent any
 
-    // Use Maven from Jenkins Global Tool Configuration (name must be "M3").
-    // Add once: Manage Jenkins → Global Tool Configuration → Maven → Add Maven, Name: M3, Install automatically.
-    tools {
-        maven 'M3'
-    }
-
     environment {
         IMAGE_NAME = "grandstay/hotel-app"
         IMAGE_TAG = "latest"
@@ -26,7 +20,8 @@ pipeline {
         stage('Build') {
             steps {
                 dir('backend') {
-                    sh 'mvn clean package -DskipTests -B'
+                    // Run Maven inside Docker - no Maven or M3 needed on Jenkins
+                    sh 'docker run --rm -v "$PWD":/app -w /app maven:3.9-eclipse-temurin-17 mvn clean package -DskipTests -B'
                 }
             }
         }
